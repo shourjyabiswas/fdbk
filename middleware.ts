@@ -11,6 +11,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  const isAdminRoute = request.nextUrl.pathname.startsWith("/admin") || request.nextUrl.pathname.startsWith("/dashboard");
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (isAdminRoute && (!adminEmail || token.email !== adminEmail)) {
+    const surveyUrl = new URL("/survey", request.url);
+    return NextResponse.redirect(surveyUrl);
+  }
+
   return NextResponse.next();
 }
 
