@@ -1,9 +1,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { motion } from "framer-motion";
 import { GripVertical, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import Button from "@/components/ui/Button";
@@ -32,7 +33,7 @@ const formSchema = surveySchema.extend({
   expiresAt: z.string().optional(),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = z.input<typeof formSchema>;
 
 const inputClassName =
   "w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]";
@@ -56,7 +57,8 @@ export default function SurveyBuilderPage() {
     },
   });
 
-  const questions = form.watch("questions");
+  const watchedQuestions = useWatch({ control: form.control, name: "questions" });
+  const questions = useMemo(() => watchedQuestions ?? [], [watchedQuestions]);
 
   const typeCounts = useMemo(() => {
     return questions.reduce<Record<string, number>>((acc, question) => {
@@ -222,7 +224,7 @@ export default function SurveyBuilderPage() {
                   </div>
                   {question.type === "radio" || question.type === "checkbox" || question.type === "dropdown" ? (
                     <div className="space-y-2">
-                      {question.options.map((option, optionIndex) => (
+                      {(question.options ?? []).map((option, optionIndex) => (
                         <div key={`${option}-${optionIndex}`} className="flex items-center gap-2">
                           <input
                             className={inputClassName}
@@ -230,7 +232,7 @@ export default function SurveyBuilderPage() {
                             onChange={(event) =>
                               form.setValue(
                                 `questions.${index}.options`,
-                                question.options.map((item, itemIndex) =>
+                                (question.options ?? []).map((item, itemIndex) =>
                                   itemIndex === optionIndex ? event.target.value : item
                                 )
                               )
@@ -242,7 +244,7 @@ export default function SurveyBuilderPage() {
                             onClick={() =>
                               form.setValue(
                                 `questions.${index}.options`,
-                                question.options.filter((_, itemIndex) => itemIndex !== optionIndex)
+                                (question.options ?? []).filter((_, itemIndex) => itemIndex !== optionIndex)
                               )
                             }
                           >
@@ -254,7 +256,10 @@ export default function SurveyBuilderPage() {
                         type="button"
                         variant="secondary"
                         onClick={() =>
-                          form.setValue(`questions.${index}.options`, [...question.options, `Option ${question.options.length + 1}`])
+                          form.setValue(`questions.${index}.options`, [
+                            ...(question.options ?? []),
+                            `Option ${(question.options ?? []).length + 1}`,
+                          ])
                         }
                       >
                         Add Option

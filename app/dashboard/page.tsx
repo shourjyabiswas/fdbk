@@ -27,10 +27,20 @@ type Aggregate = {
   data: Record<string, number>;
 };
 
+type AnalyticsPayload = {
+  totalResponses: number;
+  survey: {
+    estimatedMinutes?: number;
+    isExpired?: boolean;
+    status?: string;
+  } | null;
+  aggregates: Aggregate[];
+};
+
 const piePalette = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
 
 export default function DashboardPage() {
-  const [data, setData] = useState<{ totalResponses: number; survey: any; aggregates: Aggregate[] } | null>(null);
+  const [data, setData] = useState<AnalyticsPayload | null>(null);
 
   useEffect(() => {
     fetch("/api/analytics")

@@ -1,8 +1,9 @@
-import { Model, Schema, model, models } from "mongoose";
+import { Model, Schema, Types, model, models } from "mongoose";
 
 export const questionTypes = ["text", "radio", "checkbox", "dropdown", "rating"] as const;
 
 export interface ISurveyQuestion {
+  _id?: Types.ObjectId;
   type: (typeof questionTypes)[number];
   prompt: string;
   placeholder?: string;

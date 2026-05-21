@@ -2,15 +2,12 @@
 
 import { motion } from "framer-motion";
 import { signIn } from "next-auth/react";
-import { Merriweather } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
-
-const serif = Merriweather({ subsets: ["latin"], weight: ["400", "700"] });
 
 export default function LoginPage() {
   const router = useRouter();
@@ -47,7 +44,7 @@ export default function LoginPage() {
       >
         <Card className="space-y-6 bg-[var(--card)] text-[var(--card-foreground)]">
           <div className="space-y-2 text-center">
-            <h1 className={`text-3xl ${serif.className}`}>{process.env.NEXT_PUBLIC_APP_NAME ?? "FDBK"}</h1>
+            <h1 className="text-3xl [font-family:var(--font-heading)]">{process.env.NEXT_PUBLIC_APP_NAME ?? "FDBK"}</h1>
             <p className="text-sm text-[var(--muted-foreground)]">Authorized Access Only</p>
           </div>
           <form onSubmit={onSubmit} className="space-y-4">

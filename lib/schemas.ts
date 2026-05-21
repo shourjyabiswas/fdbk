@@ -6,7 +6,7 @@ export const questionSchema = z.object({
   prompt: z.string().min(1),
   placeholder: z.string().optional().or(z.literal("")),
   isRequired: z.boolean().default(true),
-  characterLimit: z.number().optional().nullable(),
+  characterLimit: z.number().optional(),
   shuffleOptions: z.boolean().default(false),
   options: z.array(z.string().min(1)).default([]),
 });
