@@ -4,10 +4,39 @@ import Link from "next/link";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 
+import Card from "@/components/ui/Card";
+
 const links = [
-  { href: "/admin/builder", label: "Survey Builder", active: true },
-  { href: "/admin", label: "Published Surveys", active: false },
-  { href: "/dashboard", label: "Analytics", active: false },
+  { href: "/admin", label: "Overview" },
+  { href: "/admin/builder", label: "Survey Builder" },
+  { href: "/dashboard", label: "Analytics" },
+];
+
+const quickActions = [
+  {
+    title: "Create a survey",
+    description: "Build a new survey and publish it for testers.",
+    href: "/admin/builder",
+    cta: "Open Builder",
+  },
+  {
+    title: "Published surveys",
+    description: "Review published surveys and their status.",
+    href: "/admin",
+    cta: "View Surveys",
+  },
+  {
+    title: "Analytics",
+    description: "Check response trends and exports.",
+    href: "/dashboard",
+    cta: "View Analytics",
+  },
+  {
+    title: "Test the survey",
+    description: "Open the live survey view as a tester would see it.",
+    href: "/survey",
+    cta: "Open Survey",
+  },
 ];
 
 export default function AdminPage() {
@@ -30,7 +59,7 @@ export default function AdminPage() {
             <Link
               key={item.label}
               href={item.href}
-              className={`block min-h-11 rounded-[var(--radius)] px-3 py-2 text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-accent-foreground)] ${item.active ? "border-l-2 border-[var(--primary)]" : ""}`}
+              className="block min-h-11 rounded-[var(--radius)] px-3 py-2 text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-accent-foreground)]"
             >
               {item.label}
             </Link>
@@ -38,10 +67,28 @@ export default function AdminPage() {
         </nav>
       </aside>
       <main className="p-6">
-        <h1 className="text-2xl font-semibold">Admin Dashboard</h1>
-        <p className="mt-2 text-[var(--muted-foreground)]">
-          Use the Survey Builder to create and publish your next anonymous lab-course instrument.
-        </p>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold">Admin Dashboard</h1>
+          <p className="text-[var(--muted-foreground)]">
+            Create, publish, and monitor surveys without typing URLs.
+          </p>
+        </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {quickActions.map((action) => (
+            <Card key={action.title} className="flex h-full flex-col justify-between">
+              <div className="space-y-2">
+                <h2 className="text-lg font-semibold">{action.title}</h2>
+                <p className="text-sm text-[var(--muted-foreground)]">{action.description}</p>
+              </div>
+              <Link
+                href={action.href}
+                className="mt-4 inline-flex min-h-11 items-center justify-center rounded-[var(--radius)] bg-[var(--primary)] px-4 py-2 text-sm font-medium text-[var(--primary-foreground)] hover:opacity-90"
+              >
+                {action.cta}
+              </Link>
+            </Card>
+          ))}
+        </div>
       </main>
     </div>
   );

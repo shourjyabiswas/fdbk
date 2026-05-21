@@ -26,7 +26,7 @@ export default function LoginPage() {
     });
 
     if (result?.ok) {
-      router.push("/survey");
+      router.push("/admin");
       return;
     }
 
