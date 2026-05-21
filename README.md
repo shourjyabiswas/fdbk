@@ -33,7 +33,7 @@ Only analytics endpoints decrypt data in memory for aggregation.
 
 ## Tech stack
 
-- Next.js 14+ App Router with TypeScript
+- Next.js 16+ App Router with TypeScript
 - Tailwind CSS v4 tokens mapped from CSS custom properties
 - NextAuth Credentials provider
 - MongoDB + Mongoose
@@ -49,7 +49,7 @@ Create `.env.local` and set:
 - `NEXTAUTH_SECRET`
 - `NEXTAUTH_URL`
 - `ADMIN_EMAIL`
-- `ENCRYPTION_KEY` (must be exactly 32 characters)
+- `ENCRYPTION_KEY` (application-enforced to exactly 32 characters for AES-256 key length consistency)
 - `NEXT_PUBLIC_APP_NAME`
 
 ## Scripts

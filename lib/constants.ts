@@ -1,0 +1,1 @@
+export const AUTHORIZED_TESTER_COUNT = 34;

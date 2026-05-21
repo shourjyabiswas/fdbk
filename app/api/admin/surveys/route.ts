@@ -12,7 +12,8 @@ function hasValidQuestionTypeDistribution(questions: { type: string }[]) {
     return acc;
   }, {});
 
-  return Object.values(counts).every((count) => count >= 3 && count <= 5);
+  const usedTypeCounts = Object.values(counts).filter((count) => count > 0);
+  return usedTypeCounts.every((count) => count >= 3 && count <= 5);
 }
 
 function isAdminEmail(email?: string | null) {

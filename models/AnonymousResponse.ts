@@ -12,15 +12,6 @@ export interface IAnonymousResponse {
   answers: string | IAnonymousAnswer[];
 }
 
-const anonymousAnswerSchema = new Schema<IAnonymousAnswer>(
-  {
-    questionId: { type: Schema.Types.ObjectId },
-    questionType: { type: String },
-    value: { type: Schema.Types.Mixed },
-  },
-  { _id: false }
-);
-
 const anonymousResponseSchema = new Schema<IAnonymousResponse>(
   {
     surveyId: { type: Schema.Types.ObjectId, ref: "Survey", required: true },
@@ -36,8 +27,6 @@ const anonymousResponseSchema = new Schema<IAnonymousResponse>(
   },
   { timestamps: false }
 );
-
-anonymousResponseSchema.path("answersArray", [anonymousAnswerSchema]);
 
 const AnonymousResponse: Model<IAnonymousResponse> =
   models.AnonymousResponse || model<IAnonymousResponse>("AnonymousResponse", anonymousResponseSchema);

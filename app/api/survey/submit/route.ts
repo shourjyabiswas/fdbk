@@ -20,6 +20,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Server encryption key is missing" }, { status: 500 });
   }
 
+  if (process.env.ENCRYPTION_KEY.length !== 32) {
+    return NextResponse.json({ error: "ENCRYPTION_KEY must be exactly 32 characters" }, { status: 500 });
+  }
+
   const body = await request.json();
   const { surveyId, answers } = body;
 

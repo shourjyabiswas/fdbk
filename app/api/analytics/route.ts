@@ -26,6 +26,9 @@ export async function GET() {
   if (!process.env.ENCRYPTION_KEY) {
     return NextResponse.json({ error: "Missing ENCRYPTION_KEY" }, { status: 500 });
   }
+  if (process.env.ENCRYPTION_KEY.length !== 32) {
+    return NextResponse.json({ error: "ENCRYPTION_KEY must be exactly 32 characters" }, { status: 500 });
+  }
 
   await connectToDatabase();
   const survey = await getActiveSurvey();

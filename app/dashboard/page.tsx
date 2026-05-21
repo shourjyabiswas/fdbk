@@ -18,6 +18,7 @@ import {
 } from "recharts";
 
 import Card from "@/components/ui/Card";
+import { AUTHORIZED_TESTER_COUNT } from "@/lib/constants";
 
 type Aggregate = {
   questionId: string;
@@ -50,7 +51,7 @@ export default function DashboardPage() {
 
   const completionRate = useMemo(() => {
     if (!data) return 0;
-    return ((data.totalResponses / 34) * 100).toFixed(1);
+    return ((data.totalResponses / AUTHORIZED_TESTER_COUNT) * 100).toFixed(1);
   }, [data]);
 
   return (
