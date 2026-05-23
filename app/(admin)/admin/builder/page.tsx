@@ -104,11 +104,15 @@ export default function SurveyBuilderPage() {
 
   const onSubmit = async (values: FormValues) => {
     setSubmitError("");
+    // Reverse questions so the chronological (first-added) order is preserved,
+    // since the builder prepends new questions for admin convenience.
+    const chronologicalQuestions = [...values.questions].reverse();
     const response = await fetch("/api/admin/surveys", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...values,
+        questions: chronologicalQuestions,
         status: "published",
         estimatedMinutes: Number(values.estimatedMinutes),
       }),
@@ -369,7 +373,7 @@ export default function SurveyBuilderPage() {
           disclaimer,
           estimatedMinutes: Number(estimatedMinutes) || undefined,
           instructions,
-          questions,
+          questions: [...questions].reverse(),
         }}
       />
     </main>
