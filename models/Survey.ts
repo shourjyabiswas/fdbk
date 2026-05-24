@@ -12,6 +12,7 @@ export interface ISurveyQuestion {
   minCharacterLimit?: number;
   shuffleOptions: boolean;
   options: string[];
+  persona: string;
 }
 
 export interface ISurvey {
@@ -24,8 +25,9 @@ export interface ISurvey {
   estimatedMinutes?: number;
   instructions?: string;
   isActive: boolean;
-  status: "draft" | "published";
+  status: "draft" | "published" | "archived";
   questions: ISurveyQuestion[];
+  hasPersonas: boolean;
 }
 
 const questionSchema = new Schema<ISurveyQuestion>(
@@ -38,6 +40,7 @@ const questionSchema = new Schema<ISurveyQuestion>(
     minCharacterLimit: { type: Number },
     shuffleOptions: { type: Boolean, default: false },
     options: [{ type: String }],
+    persona: { type: String, default: "all" },
   },
   { _id: true }
 );
@@ -55,13 +58,18 @@ const surveySchema = new Schema<ISurvey>(
     isActive: { type: Boolean, default: false },
     status: {
       type: String,
-      enum: ["draft", "published"],
+      enum: ["draft", "published", "archived"],
       default: "draft",
     },
     questions: { type: [questionSchema], default: [] },
+    hasPersonas: { type: Boolean, default: true },
   },
   { timestamps: false }
 );
+
+if (process.env.NODE_ENV === "development" && models.Survey) {
+  delete (models as Record<string, unknown>).Survey;
+}
 
 const Survey: Model<ISurvey> = models.Survey || model<ISurvey>("Survey", surveySchema);
 

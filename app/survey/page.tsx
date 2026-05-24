@@ -2,7 +2,7 @@
 
 import { format } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
-import { Star } from "lucide-react";
+import { Star, Info, X } from "lucide-react";
 import { Suspense, useEffect, useMemo, useReducer, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -20,6 +20,7 @@ type Question = {
   minCharacterLimit?: number;
   shuffleOptions?: boolean;
   options?: string[];
+  persona?: string;
 };
 
 type SurveyStatus = {
@@ -32,6 +33,7 @@ type SurveyStatus = {
   personaAvailability?: {
     counts: Record<string, number>;
     available: Array<{ key: string; label: string }>;
+    groupMemberCount?: number;
   } | null;
   survey?: {
     _id: string;
@@ -44,6 +46,7 @@ type SurveyStatus = {
     estimatedMinutes?: number;
     instructions?: string;
     isExpired?: boolean;
+    hasPersonas?: boolean;
     questions: Question[];
   } | null;
 };
@@ -103,6 +106,7 @@ function SurveyContent() {
   const [loading, setLoading] = useState(true);
   const [submitError, setSubmitError] = useState("");
   const [selectedPersona, setSelectedPersona] = useState("");
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -119,12 +123,36 @@ function SurveyContent() {
     }
   }, [searchParams, selectedPersona, status]);
 
-  const questions = status?.survey?.questions ?? [];
+  useEffect(() => {
+    if (status?.survey) {
+      const hasPersonas = status.survey.hasPersonas !== false;
+      if (!hasPersonas) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSelectedPersona("all");
+      } else if (status.personaAvailability) {
+        const memberCount = status.personaAvailability.groupMemberCount ?? 0;
+        if (memberCount === 1) {
+          const available = status.personaAvailability.available ?? [];
+          const defaultPersona = available[0]?.key || "all";
+          setSelectedPersona(defaultPersona);
+        }
+      }
+    }
+  }, [status]);
+
+  const questions = useMemo(() => {
+    const allQuestions = status?.survey?.questions ?? [];
+    if (status?.survey?.hasPersonas === false || !selectedPersona) return allQuestions;
+    return allQuestions.filter(
+      (question) => !question.persona || question.persona === "all" || question.persona === selectedPersona
+    );
+  }, [status?.survey, selectedPersona]);
   const totalSteps = questions.length + 2;
   const currentQuestion = state.step > 0 && state.step <= questions.length ? questions[state.step - 1] : null;
   const availablePersonas = status?.personaAvailability?.available ?? [];
   const personaCounts = status?.personaAvailability?.counts ?? {};
   const isSetupComplete = Boolean(status?.assignedGroup && selectedPersona);
+  const shouldSkipIntro = searchParams.get("start") === "1";
 
   const progress = useMemo(() => {
     if (totalSteps <= 1) return 0;
@@ -273,43 +301,57 @@ function SurveyContent() {
           >
             {state.step === 0 ? (
               <Card className="space-y-4">
-                <motion.div variants={heroVariants} initial="hidden" animate="visible" className="space-y-3">
-                  <motion.h1 variants={heroLine} className="text-3xl font-semibold text-[var(--foreground)]">
-                    {status.survey.title}
-                  </motion.h1>
-                  <motion.div
-                    variants={heroLine}
-                    className="border-l-2 border-[var(--secondary)] pl-4 text-sm text-[var(--muted-foreground)] whitespace-pre-line break-words"
-                  >
-                    <LinkifyText text={status.survey.introduction} />
-                  </motion.div>
-                  <motion.div variants={heroLine} className="space-y-2">
-                    <p className="text-base font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
-                      Instructions
+                {shouldSkipIntro ? (
+                  <div className="space-y-2 pb-2 border-b border-[var(--border)]">
+                    <h1 className="text-2xl font-semibold text-[var(--foreground)]">
+                      {status.survey.title}
+                    </h1>
+                    <p className="text-sm text-[var(--muted-foreground)]">
+                      Please choose the role you wish to submit feedback for to begin.
                     </p>
-                    <p className="pl-2 text-[var(--foreground)] whitespace-pre-line break-words">
-                      <LinkifyText text={status.survey.description} />
-                    </p>
-                  </motion.div>
-                </motion.div>
-                <div className="space-y-2">
-                  <p className="text-base font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
-                    Disclaimer
-                  </p>
-                  <p className="pl-2 text-[var(--foreground)] whitespace-pre-line break-words">
-                    <LinkifyText text={status.survey.disclaimer} />
-                  </p>
-                </div>
-                <div className="grid gap-2 text-sm text-[var(--muted-foreground)]">
-                  <p>Created: {format(new Date(status.survey.createdAt), "PPP")}</p>
-                  <p>
-                    Expires: {status.survey.expiresAt ? format(new Date(status.survey.expiresAt), "PPP") : "No expiry"}
-                  </p>
-                  <p>Estimated: {status.survey.estimatedMinutes ?? "N/A"} minutes</p>
-                  <p className="whitespace-pre-line break-words">
-                    <LinkifyText text={status.survey.instructions} />
-                  </p>
-                </div>
+                  </div>
+                ) : (
+                  <>
+                    <motion.div variants={heroVariants} initial="hidden" animate="visible" className="space-y-3">
+                      <motion.h1 variants={heroLine} className="text-3xl font-semibold text-[var(--foreground)]">
+                        {status.survey.title}
+                      </motion.h1>
+                      <motion.div
+                        variants={heroLine}
+                        className="border-l-2 border-[var(--secondary)] pl-4 text-sm text-[var(--muted-foreground)] whitespace-pre-line break-words"
+                      >
+                        <LinkifyText text={status.survey.introduction} />
+                      </motion.div>
+                      <motion.div variants={heroLine} className="space-y-2">
+                        <p className="text-base font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+                          Instructions
+                        </p>
+                        <p className="pl-2 text-[var(--foreground)] whitespace-pre-line break-words">
+                          <LinkifyText text={status.survey.description} />
+                        </p>
+                      </motion.div>
+                    </motion.div>
+                    <div className="space-y-2">
+                      <p className="text-base font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+                        Disclaimer
+                      </p>
+                      <p className="pl-2 text-[var(--foreground)] whitespace-pre-line break-words">
+                        <LinkifyText text={status.survey.disclaimer} />
+                      </p>
+                    </div>
+                    <div className="grid gap-2 text-sm text-[var(--muted-foreground)]">
+                      <p>Created: {format(new Date(status.survey.createdAt), "PPP")}</p>
+                      <p>
+                        Expires: {status.survey.expiresAt ? format(new Date(status.survey.expiresAt), "PPP") : "No expiry"}
+                      </p>
+                      <p>Estimated: {status.survey.estimatedMinutes ?? "N/A"} minutes</p>
+                      <p className="whitespace-pre-line break-words">
+                        <LinkifyText text={status.survey.instructions} />
+                      </p>
+                    </div>
+                  </>
+                )}
+
                 <div className="space-y-4 rounded-[var(--radius)] border border-[var(--border)] p-4">
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-[var(--foreground)]">Your assigned group</p>
@@ -318,36 +360,38 @@ function SurveyContent() {
                     </p>
                   </div>
 
-                  <div className="space-y-2">
-                    <label htmlFor="survey-persona" className="text-sm font-medium text-[var(--foreground)]">
-                      Select a persona to review
-                    </label>
-                    <select
-                      id="survey-persona"
-                      value={selectedPersona}
-                      disabled={!status.assignedGroup || availablePersonas.length === 0}
-                      onChange={(event) => setSelectedPersona(event.target.value)}
-                      className="min-h-11 w-full rounded-[var(--radius)] border border-[var(--input)] bg-[var(--background)] px-3 py-2 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <option value="">
-                        {!status.assignedGroup ? "No group assigned" : "Choose a persona"}
-                      </option>
-                      {availablePersonas.map((persona) => (
-                        <option key={persona.key} value={persona.key}>
-                          {persona.label}
+                  {status.survey.hasPersonas !== false && (
+                    <div className="space-y-2">
+                      <label htmlFor="survey-persona" className="text-sm font-medium text-[var(--foreground)]">
+                        Select a role to review
+                      </label>
+                      <select
+                        id="survey-persona"
+                        value={selectedPersona}
+                        disabled={!status.assignedGroup || availablePersonas.length === 0}
+                        onChange={(event) => setSelectedPersona(event.target.value)}
+                        className="min-h-11 w-full rounded-[var(--radius)] border border-[var(--input)] bg-[var(--background)] px-3 py-2 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <option value="">
+                          {!status.assignedGroup ? "No group assigned" : "Choose a role"}
                         </option>
-                      ))}
-                    </select>
-                    {status.assignedGroup ? (
-                      <div className="flex flex-wrap gap-2 text-xs text-[var(--muted-foreground)]">
-                        {(status.personaOptions ?? []).map((persona) => (
-                          <span key={persona.key} className="rounded-full border border-[var(--border)] px-2 py-1">
-                            {persona.label}: {personaCounts[persona.key] ?? 0}
-                          </span>
+                        {availablePersonas.map((persona) => (
+                          <option key={persona.key} value={persona.key}>
+                            {persona.label}
+                          </option>
                         ))}
-                      </div>
-                    ) : null}
-                  </div>
+                      </select>
+                      {status.assignedGroup ? (
+                        <div className="flex flex-wrap gap-2 text-xs text-[var(--muted-foreground)]">
+                          {(status.personaOptions ?? []).map((persona) => (
+                            <span key={persona.key} className="rounded-full border border-[var(--border)] px-2 py-1">
+                              {persona.label}: {personaCounts[persona.key] ?? 0}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
                 <Button onClick={onNext} disabled={!isSetupComplete}>
                   Begin Survey
@@ -523,6 +567,65 @@ function SurveyContent() {
           </div>
         </div>
       )}
+
+      {/* Floating Info Button & Closable Popup */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <button
+          onClick={() => setIsInfoOpen((prev) => !prev)}
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] shadow-lg hover:opacity-90 hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer"
+          title="View Instructions & Disclaimer"
+          aria-label="View Instructions & Disclaimer"
+        >
+          <Info className="h-6 w-6" />
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {isInfoOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-20 right-6 z-50 w-[90vw] max-w-sm rounded-[var(--radius)] border border-[var(--border)] bg-[var(--card)] p-5 shadow-2xl space-y-4"
+          >
+            <div className="flex items-center justify-between border-b border-[var(--border)] pb-2">
+              <h3 className="font-semibold text-[var(--foreground)] flex items-center gap-2">
+                <Info className="h-4 w-4 text-[var(--primary)]" />
+                Instructions & Disclaimer
+              </h3>
+              <button
+                onClick={() => setIsInfoOpen(false)}
+                className="rounded-full p-1 text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)] transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-60 overflow-y-auto space-y-4 pr-1 text-sm text-[var(--foreground)]">
+              {status.survey.description ? (
+                <div className="space-y-1">
+                  <p className="font-semibold text-[var(--muted-foreground)] uppercase tracking-wide text-xs">
+                    Instructions
+                  </p>
+                  <p className="whitespace-pre-line break-words pl-1 text-[var(--foreground)]">
+                    <LinkifyText text={status.survey.description} />
+                  </p>
+                </div>
+              ) : null}
+              {status.survey.disclaimer ? (
+                <div className="space-y-1">
+                  <p className="font-semibold text-[var(--muted-foreground)] uppercase tracking-wide text-xs">
+                    Disclaimer
+                  </p>
+                  <p className="whitespace-pre-line break-words pl-1 text-[var(--foreground)]">
+                    <LinkifyText text={status.survey.disclaimer} />
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

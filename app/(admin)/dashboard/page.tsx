@@ -36,6 +36,7 @@ type AnalyticsPayload = {
     estimatedMinutes?: number;
     isExpired?: boolean;
     status?: string;
+    hasPersonas?: boolean;
   } | null;
   aggregates: Aggregate[];
 };
@@ -54,6 +55,7 @@ export default function DashboardPage() {
   const [data, setData] = useState<AnalyticsPayload | null>(null);
   const [surveys, setSurveys] = useState<SurveyOption[]>([]);
   const [selectedSurveyId, setSelectedSurveyId] = useState<string>("");
+  const [selectedPersona, setSelectedPersona] = useState<string>("all");
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -74,16 +76,27 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!selectedSurveyId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setData(null);
       return;
     }
 
     const url = new URL("/api/analytics", window.location.origin);
     url.searchParams.set("surveyId", selectedSurveyId);
+    if (selectedPersona && selectedPersona !== "all") {
+      url.searchParams.set("persona", selectedPersona);
+    }
     fetch(url)
       .then((res) => res.json())
       .then((json) => setData(json));
-  }, [selectedSurveyId]);
+  }, [selectedSurveyId, selectedPersona]);
+
+  useEffect(() => {
+    if (data?.survey && data.survey.hasPersonas === false) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedPersona("all");
+    }
+  }, [data]);
 
   const completionRate = useMemo(() => {
     if (!data) return 0;
@@ -98,7 +111,7 @@ export default function DashboardPage() {
             <p className="text-[var(--muted-foreground)]">Pick a survey to review its performance.</p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <select
+             <select
               value={selectedSurveyId}
               onChange={(event) => setSelectedSurveyId(event.target.value)}
               className="min-h-11 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)]"
@@ -113,10 +126,22 @@ export default function DashboardPage() {
                 ))
               )}
             </select>
+            {data?.survey?.hasPersonas !== false && (
+              <select
+                value={selectedPersona}
+                onChange={(event) => setSelectedPersona(event.target.value)}
+                className="min-h-11 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)]"
+              >
+                <option value="all">All Roles</option>
+                <option value="student">Student</option>
+                <option value="teacher">Professor</option>
+                <option value="admin_hod">Admin / HOD</option>
+              </select>
+            )}
             <a
               href={
                 selectedSurveyId
-                  ? `/api/analytics/export?format=csv&surveyId=${selectedSurveyId}`
+                  ? `/api/analytics/export?format=csv&surveyId=${selectedSurveyId}${selectedPersona !== 'all' ? `&persona=${selectedPersona}` : ''}`
                   : "/api/analytics/export?format=csv"
               }
             >
@@ -162,7 +187,7 @@ export default function DashboardPage() {
                     <a
                       href={
                         selectedSurveyId
-                          ? `/api/analytics/export?format=text&surveyId=${selectedSurveyId}&questionId=${aggregate.questionId}`
+                          ? `/api/analytics/export?format=text&surveyId=${selectedSurveyId}&questionId=${aggregate.questionId}${selectedPersona !== 'all' ? `&persona=${selectedPersona}` : ''}`
                           : "/api/analytics/export?format=text"
                       }
                     >

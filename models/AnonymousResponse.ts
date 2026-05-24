@@ -11,7 +11,7 @@ export interface IAnonymousAnswer {
 export interface IAnonymousResponse {
   surveyId: Types.ObjectId;
   group?: string;
-  persona?: SurveyPersonaKey;
+  persona?: SurveyPersonaKey | "all";
   answers: string | IAnonymousAnswer[];
 }
 
@@ -21,7 +21,7 @@ const anonymousResponseSchema = new Schema<IAnonymousResponse>(
     group: { type: String, trim: true },
     persona: {
       type: String,
-      enum: SURVEY_PERSONAS.map((persona) => persona.key),
+      enum: [...SURVEY_PERSONAS.map((persona) => persona.key), "all"],
     },
     answers: {
       type: Schema.Types.Mixed,
@@ -36,6 +36,10 @@ const anonymousResponseSchema = new Schema<IAnonymousResponse>(
 );
 
 anonymousResponseSchema.index({ surveyId: 1, group: 1, persona: 1 });
+
+if (process.env.NODE_ENV === "development" && models.AnonymousResponse) {
+  delete (models as Record<string, unknown>).AnonymousResponse;
+}
 
 const AnonymousResponse: Model<IAnonymousResponse> =
   models.AnonymousResponse || model<IAnonymousResponse>("AnonymousResponse", anonymousResponseSchema);

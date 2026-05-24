@@ -27,6 +27,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShareUrl(`${window.location.origin}/survey`);
     }
   }, []);
@@ -45,10 +46,44 @@ export default function AdminPage() {
         prev.map((survey) => ({
           ...survey,
           isActive: survey._id === updated.survey._id,
+          status: survey._id === updated.survey._id ? "published" : survey.status,
         }))
       );
     }
 
+    setIsUpdating(false);
+  };
+
+  const archiveSurvey = async (surveyId: string) => {
+    if (!confirm("Are you sure you want to archive this survey?")) return;
+    setIsUpdating(true);
+    const response = await fetch(`/api/admin/surveys/${surveyId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "archived" }),
+    });
+
+    if (response.ok) {
+      const updated = await response.json();
+      setSurveys((prev) =>
+        prev.map((survey) =>
+          survey._id === updated.survey._id ? { ...survey, ...updated.survey } : survey
+        )
+      );
+    }
+    setIsUpdating(false);
+  };
+
+  const deleteSurvey = async (surveyId: string) => {
+    if (!confirm("Are you sure you want to permanently delete this survey? This cannot be undone.")) return;
+    setIsUpdating(true);
+    const response = await fetch(`/api/admin/surveys/${surveyId}`, {
+      method: "DELETE",
+    });
+
+    if (response.ok) {
+      setSurveys((prev) => prev.filter((survey) => survey._id !== surveyId));
+    }
     setIsUpdating(false);
   };
 
@@ -101,7 +136,9 @@ export default function AdminPage() {
                 <Card key={survey._id} className="flex flex-col justify-between">
                   <div className="space-y-2">
                     <h3 className="text-lg font-semibold">{survey.title || "Untitled Survey"}</h3>
-                    <p className="text-sm text-[var(--muted-foreground)] capitalize">Status: {survey.status}</p>
+                    <p className="text-sm text-[var(--muted-foreground)] capitalize">
+                      Status: <span className={`font-semibold ${survey.status === 'archived' ? 'text-[var(--destructive)]' : 'text-[var(--foreground)]'}`}>{survey.status}</span>
+                    </p>
                     <p className="text-xs text-[var(--muted-foreground)]">
                       Created: {new Date(survey.createdAt).toLocaleDateString()}
                     </p>
@@ -109,14 +146,38 @@ export default function AdminPage() {
                       <p className="text-xs font-semibold text-[var(--primary)]">Active Survey</p>
                     ) : null}
                   </div>
-                  <div className="mt-4">
+                  <div className="mt-4 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius)] border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--accent)] disabled:opacity-50"
+                      className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius)] border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--accent)] disabled:opacity-50 cursor-pointer"
                       onClick={() => setActiveSurvey(survey._id)}
-                      disabled={isUpdating || survey.isActive}
+                      disabled={isUpdating || survey.isActive || survey.status === "archived"}
                     >
                       {survey.isActive ? "Active" : "Set Active"}
+                    </button>
+                    <Link
+                      href={`/admin/builder?id=${survey._id}`}
+                      className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius)] border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--accent)]"
+                    >
+                      Edit
+                    </Link>
+                    {survey.status !== "archived" ? (
+                      <button
+                        type="button"
+                        className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius)] border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--accent)] disabled:opacity-50 cursor-pointer"
+                        onClick={() => archiveSurvey(survey._id)}
+                        disabled={isUpdating || survey.isActive}
+                      >
+                        Archive
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius)] border border-[var(--destructive)] px-3 py-2 text-sm font-medium text-[var(--destructive)] hover:bg-[var(--destructive)] hover:text-white disabled:opacity-50 cursor-pointer"
+                      onClick={() => deleteSurvey(survey._id)}
+                      disabled={isUpdating}
+                    >
+                      Delete
                     </button>
                   </div>
                 </Card>

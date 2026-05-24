@@ -37,6 +37,8 @@ export async function GET(request: Request) {
   await connectToDatabase();
   const url = new URL(request.url);
   const surveyId = url.searchParams.get("surveyId");
+  const persona = url.searchParams.get("persona");
+
   const survey = surveyId
     ? await Survey.findById(surveyId).lean()
     : await Survey.findOne({ status: "published" }).sort({ createdAt: -1 }).lean();
@@ -45,11 +47,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ survey: null, aggregates: [] });
   }
 
-  const responses = await AnonymousResponse.find({ surveyId: survey._id }).lean();
+  const queryFilter: Record<string, unknown> = { surveyId: survey._id };
+  const hasPersonas = survey.hasPersonas !== false;
+  if (hasPersonas && persona && persona !== "all") {
+    queryFilter.persona = persona;
+  }
+
+  const responses = await AnonymousResponse.find(queryFilter).lean();
 
   const aggregateMap = new Map<string, AggregatedItem>();
 
-  for (const question of survey.questions) {
+  const surveyQuestions = (hasPersonas && persona && persona !== "all")
+    ? survey.questions.filter((q) => !q.persona || q.persona === "all" || q.persona === persona)
+    : survey.questions;
+
+  for (const question of surveyQuestions) {
     aggregateMap.set(String(question._id), {
       questionId: String(question._id),
       type: question.type,

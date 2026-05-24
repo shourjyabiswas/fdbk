@@ -51,9 +51,17 @@ export async function GET(request: Request) {
       }
     }
 
-    const responses = await AnonymousResponse.find({ surveyId: survey._id }).lean();
+    const personaParam = url.searchParams.get("persona");
+    const queryFilter: Record<string, unknown> = { surveyId: survey._id };
+    if (personaParam && personaParam !== "all") {
+      queryFilter.persona = personaParam;
+    }
+
+    const responses = await AnonymousResponse.find(queryFilter).lean();
     const collected: string[] = [];
-    const allTextQuestions = survey.questions.filter((item) => item.type === "text");
+    const allTextQuestions = (personaParam && personaParam !== "all")
+      ? survey.questions.filter((item) => item.type === "text" && (!item.persona || item.persona === "all" || item.persona === personaParam))
+      : survey.questions.filter((item) => item.type === "text");
     const allTextResponses = new Map<string, string[]>();
 
     if (formatParam === "text-all") {
@@ -128,6 +136,10 @@ export async function GET(request: Request) {
   const analyticsUrl = new URL(`${url.origin}/api/analytics`);
   if (surveyId) {
     analyticsUrl.searchParams.set("surveyId", surveyId);
+  }
+  const personaParam = url.searchParams.get("persona");
+  if (personaParam) {
+    analyticsUrl.searchParams.set("persona", personaParam);
   }
 
   const analyticsResponse = await fetch(analyticsUrl, {

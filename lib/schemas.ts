@@ -10,6 +10,7 @@ export const questionSchema = z.object({
   minCharacterLimit: z.number().min(0).optional(),
   shuffleOptions: z.boolean().default(false),
   options: z.array(z.string().min(1)).default([]),
+  persona: z.enum(["all", "student", "teacher", "admin_hod"]).default("all"),
 });
 
 export const surveySchema = z.object({
@@ -20,8 +21,9 @@ export const surveySchema = z.object({
   expiresAt: z.string().optional(),
   estimatedMinutes: z.number().optional(),
   instructions: z.string().optional(),
-  status: z.enum(["draft", "published"]).optional(),
+  status: z.enum(["draft", "published", "archived"]).optional(),
   questions: z.array(questionSchema).min(1),
+  hasPersonas: z.boolean().default(true),
 });
 
 export type SurveyInput = z.infer<typeof surveySchema>;

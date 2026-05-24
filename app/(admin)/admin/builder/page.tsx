@@ -3,9 +3,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import { GripVertical, Plus, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useMemo, useState, useEffect, Suspense } from "react";
+import { useForm, useWatch, Controller } from "react-hook-form";
 import { z } from "zod";
+import { useSearchParams } from "next/navigation";
 
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -30,6 +31,7 @@ const emptyQuestion = (type: SurveyInput["questions"][number]["type"]): SurveyIn
   minCharacterLimit: undefined,
   shuffleOptions: false,
   options: type === "text" || type === "rating" ? [] : ["Option 1", "Option 2"],
+  persona: "all",
 });
 
 const questionTypeOptions = [
@@ -49,7 +51,10 @@ type FormValues = z.input<typeof formSchema>;
 const inputClassName =
   "w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]";
 
-export default function SurveyBuilderPage() {
+function SurveyBuilderContent() {
+  const searchParams = useSearchParams();
+  const surveyId = searchParams.get("id");
+
   const [questionTypeToAdd, setQuestionTypeToAdd] = useState<FormValues["questions"][number]["type"]>("text");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState("");
@@ -66,6 +71,7 @@ export default function SurveyBuilderPage() {
       estimatedMinutes: 10,
       instructions: "",
       questions: [],
+      hasPersonas: true,
     },
   });
 
@@ -75,8 +81,33 @@ export default function SurveyBuilderPage() {
   const disclaimer = useWatch({ control: form.control, name: "disclaimer" }) ?? "";
   const estimatedMinutes = useWatch({ control: form.control, name: "estimatedMinutes" }) ?? 10;
   const instructions = useWatch({ control: form.control, name: "instructions" }) ?? "";
+  const hasPersonas = useWatch({ control: form.control, name: "hasPersonas" }) ?? true;
   const watchedQuestions = useWatch({ control: form.control, name: "questions" });
   const questions = useMemo(() => watchedQuestions ?? [], [watchedQuestions]);
+
+  // Load existing survey details in Edit Mode
+  useEffect(() => {
+    if (surveyId) {
+      fetch(`/api/admin/surveys/${surveyId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.survey) {
+            const survey = data.survey;
+            form.reset({
+              title: survey.title ?? "",
+              introduction: survey.introduction ?? "",
+              description: survey.description ?? "",
+              disclaimer: survey.disclaimer ?? "",
+              expiresAt: survey.expiresAt ? new Date(survey.expiresAt).toISOString().split("T")[0] : "",
+              estimatedMinutes: survey.estimatedMinutes ?? 10,
+              instructions: survey.instructions ?? "",
+              questions: [...survey.questions].reverse(),
+              hasPersonas: survey.hasPersonas !== false,
+            });
+          }
+        });
+    }
+  }, [surveyId, form]);
 
   const typeCounts = useMemo(() => {
     return questions.reduce<Record<string, number>>((acc, question) => {
@@ -104,11 +135,12 @@ export default function SurveyBuilderPage() {
 
   const onSubmit = async (values: FormValues) => {
     setSubmitError("");
-    // Reverse questions so the chronological (first-added) order is preserved,
-    // since the builder prepends new questions for admin convenience.
     const chronologicalQuestions = [...values.questions].reverse();
-    const response = await fetch("/api/admin/surveys", {
-      method: "POST",
+    const url = surveyId ? `/api/admin/surveys/${surveyId}` : "/api/admin/surveys";
+    const method = surveyId ? "PUT" : "POST";
+
+    const response = await fetch(url, {
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...values,
@@ -124,12 +156,16 @@ export default function SurveyBuilderPage() {
       return;
     }
 
-    form.reset({ ...form.getValues(), questions: [] });
+    if (surveyId) {
+      alert("Survey updated successfully!");
+    } else {
+      form.reset({ ...form.getValues(), questions: [] });
+    }
   };
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
-      <h1 className="text-2xl font-semibold">Survey Builder</h1>
+      <h1 className="text-2xl font-semibold">{surveyId ? "Edit Survey" : "Survey Builder"}</h1>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Card className="space-y-4">
           <div>
@@ -166,6 +202,22 @@ export default function SurveyBuilderPage() {
           <div>
             <label className="mb-1 block text-sm">Instructions</label>
             <textarea {...form.register("instructions")} className={inputClassName} />
+          </div>
+          <div className="pt-2">
+            <label className="flex min-h-11 items-center gap-2 rounded-[var(--radius)] border border-[var(--border)] px-3 py-2 bg-[var(--background)] cursor-pointer hover:bg-[var(--accent)] transition-colors">
+              <Controller
+                control={form.control}
+                name="hasPersonas"
+                render={({ field }) => (
+                  <input
+                    type="checkbox"
+                    checked={!!field.value}
+                    onChange={(event) => field.onChange(event.target.checked)}
+                  />
+                )}
+              />
+              <span className="text-sm font-medium text-[var(--foreground)]">Use Target Roles / Personas (Multi-role Questionnaire)</span>
+            </label>
           </div>
         </Card>
 
@@ -227,7 +279,11 @@ export default function SurveyBuilderPage() {
                       className={inputClassName}
                     />
                   )}
-                  <div className={question.type === "text" ? "grid gap-4 md:grid-cols-3" : ""}>
+                  <div className={`grid gap-4 ${
+                    question.type === "text"
+                      ? (hasPersonas ? "md:grid-cols-4" : "md:grid-cols-3")
+                      : (hasPersonas ? "md:grid-cols-2" : "md:grid-cols-1")
+                  }`}>
                     <label className="flex min-h-11 items-center gap-2 rounded-[var(--radius)] border border-[var(--border)] px-3 py-2">
                       <input
                         type="checkbox"
@@ -236,6 +292,23 @@ export default function SurveyBuilderPage() {
                       />
                       Required
                     </label>
+
+                    {hasPersonas ? (
+                      <div className="flex min-h-11 items-center gap-2 rounded-[var(--radius)] border border-[var(--border)] px-3 py-2">
+                        <span className="text-sm font-medium text-[var(--muted-foreground)] whitespace-nowrap">Target Role:</span>
+                        <select
+                          value={question.persona ?? "all"}
+                          onChange={(event) => form.setValue(`questions.${index}.persona`, event.target.value as "all" | "student" | "teacher" | "admin_hod")}
+                          className="w-full bg-transparent text-sm focus:outline-none text-[var(--foreground)]"
+                        >
+                          <option value="all" className="bg-[var(--card)]">All Roles</option>
+                          <option value="student" className="bg-[var(--card)]">Student</option>
+                          <option value="teacher" className="bg-[var(--card)]">Professor</option>
+                          <option value="admin_hod" className="bg-[var(--card)]">Admin / HOD</option>
+                        </select>
+                      </div>
+                    ) : null}
+
                     {question.type === "text" && (
                       <>
                         <input
@@ -248,7 +321,7 @@ export default function SurveyBuilderPage() {
                               event.target.value === "" ? undefined : Math.max(0, Number(event.target.value))
                             )
                           }
-                          placeholder="Min character limit"
+                          placeholder="Min char limit"
                           className={inputClassName}
                         />
                         <input
@@ -261,7 +334,7 @@ export default function SurveyBuilderPage() {
                               event.target.value === "" ? undefined : Math.max(0, Number(event.target.value))
                             )
                           }
-                          placeholder="Max character limit"
+                          placeholder="Max char limit"
                           className={inputClassName}
                         />
                       </>
@@ -358,7 +431,7 @@ export default function SurveyBuilderPage() {
               Preview Survey
             </Button>
             <Button type="submit" disabled={questions.length === 0 || hasTypeConstraintError}>
-              Publish Survey
+              {surveyId ? "Save Changes" : "Publish Survey"}
             </Button>
           </div>
         </Card>
@@ -377,5 +450,13 @@ export default function SurveyBuilderPage() {
         }}
       />
     </main>
+  );
+}
+
+export default function SurveyBuilderPage() {
+  return (
+    <Suspense fallback={<main className="mx-auto max-w-7xl p-4 md:p-6">Loading builder...</main>}>
+      <SurveyBuilderContent />
+    </Suspense>
   );
 }

@@ -11,6 +11,7 @@ import { getPersonaAvailability } from "@/lib/persona-availability";
 import AnonymousResponse from "@/models/AnonymousResponse";
 import SubmissionRecord from "@/models/SubmissionRecord";
 import User from "@/models/User";
+import Survey from "@/models/Survey";
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -33,13 +34,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing payload" }, { status: 400 });
   }
 
-  const isValidPersona = SURVEY_PERSONAS.some((item) => item.key === persona);
+  await connectToDatabase();
 
-  if (!isValidPersona) {
-    return NextResponse.json({ error: "Invalid persona" }, { status: 400 });
+  const survey = await Survey.findById(surveyId).lean();
+  if (!survey) {
+    return NextResponse.json({ error: "Survey not found" }, { status: 404 });
   }
 
-  await connectToDatabase();
+  const hasPersonas = survey.hasPersonas !== false;
+
+  if (hasPersonas) {
+    const isValidPersona = SURVEY_PERSONAS.some((item) => item.key === persona);
+    if (!isValidPersona) {
+      return NextResponse.json({ error: "Invalid persona" }, { status: 400 });
+    }
+  } else {
+    if (persona !== "all") {
+      return NextResponse.json({ error: "Invalid persona for this survey" }, { status: 400 });
+    }
+  }
 
   const user = await User.findById(session.user.userId);
   if (!user || !user.isAuthorized) {
@@ -64,19 +77,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Already submitted" }, { status: 409 });
   }
 
-  const personaAvailability = getPersonaAvailability(
-    await AnonymousResponse.find({ surveyId, group: normalizedGroup }).select("persona").lean(),
-    await User.countDocuments({ group: normalizedGroup, role: "tester", isAuthorized: true })
-  );
-  const availablePersonas = personaAvailability.available.map((item) => item.key);
-
-  if (!availablePersonas.includes(persona)) {
-    return NextResponse.json(
-      {
-        error: "That persona already has enough responses for your group. Please choose an available persona.",
-      },
-      { status: 409 }
+  if (hasPersonas) {
+    const personaAvailability = getPersonaAvailability(
+      await AnonymousResponse.find({ surveyId, group: normalizedGroup }).select("persona").lean(),
+      await User.countDocuments({ group: normalizedGroup, role: "tester", isAuthorized: true })
     );
+    const availablePersonas = personaAvailability.available.map((item) => item.key);
+
+    if (!availablePersonas.includes(persona)) {
+      return NextResponse.json(
+        {
+          error: "That persona already has enough responses for your group. Please choose an available persona.",
+        },
+        { status: 409 }
+      );
+    }
   }
 
   let temporaryAnonymousToken: string | null = crypto.randomBytes(32).toString("hex");
