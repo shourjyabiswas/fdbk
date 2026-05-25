@@ -101,7 +101,7 @@ function SurveyBuilderContent() {
               expiresAt: survey.expiresAt ? new Date(survey.expiresAt).toISOString().split("T")[0] : "",
               estimatedMinutes: survey.estimatedMinutes ?? 10,
               instructions: survey.instructions ?? "",
-              questions: [...survey.questions].reverse(),
+              questions: survey.questions ?? [],
               hasPersonas: survey.hasPersonas !== false,
             });
           }
@@ -133,7 +133,6 @@ function SurveyBuilderContent() {
 
   const onSubmit = async (values: FormValues) => {
     setSubmitError("");
-    const chronologicalQuestions = [...values.questions].reverse();
     const url = surveyId ? `/api/admin/surveys/${surveyId}` : "/api/admin/surveys";
     const method = surveyId ? "PUT" : "POST";
 
@@ -142,7 +141,7 @@ function SurveyBuilderContent() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...values,
-        questions: chronologicalQuestions,
+        questions: values.questions,
         status: "published",
         estimatedMinutes: Number(values.estimatedMinutes),
       }),
@@ -438,7 +437,7 @@ function SurveyBuilderContent() {
           disclaimer,
           estimatedMinutes: Number(estimatedMinutes) || undefined,
           instructions,
-          questions: [...questions].reverse(),
+          questions,
         }}
       />
     </main>
