@@ -116,8 +116,6 @@ function SurveyBuilderContent() {
     }, {});
   }, [questions]);
 
-  const hasTypeConstraintError = Object.values(typeCounts).some((count) => count < 3 || count > 5);
-
   const onAddQuestion = () => {
     form.setValue("questions", [emptyQuestion(questionTypeToAdd), ...questions]);
   };
@@ -405,19 +403,13 @@ function SurveyBuilderContent() {
             <ul className="mt-1 space-y-1 text-[var(--muted-foreground)]">
               {questionTypeOptions.map((item) => {
                 const count = typeCounts[item.value] ?? 0;
-                const invalid = count > 0 && (count < 3 || count > 5);
                 return (
-                  <li key={item.value} className={invalid ? "text-[var(--destructive)]" : ""}>
+                  <li key={item.value}>
                     {item.label}: {count}
                   </li>
                 );
               })}
             </ul>
-            {hasTypeConstraintError ? (
-              <p className="mt-2 text-[var(--destructive)]">
-                Each question type used must have between 3 and 5 questions of that type.
-              </p>
-            ) : null}
           </div>
 
           {submitError ? <p className="text-sm text-[var(--destructive)]">{submitError}</p> : null}
@@ -430,7 +422,7 @@ function SurveyBuilderContent() {
             >
               Preview Survey
             </Button>
-            <Button type="submit" disabled={questions.length === 0 || hasTypeConstraintError}>
+            <Button type="submit" disabled={questions.length === 0}>
               {surveyId ? "Save Changes" : "Publish Survey"}
             </Button>
           </div>

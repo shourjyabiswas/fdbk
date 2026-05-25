@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { connectToDatabase } from "@/lib/mongodb";
 import { getActiveSurvey } from "@/lib/survey";
 import LoginClient from "@/app/login/LoginClient";

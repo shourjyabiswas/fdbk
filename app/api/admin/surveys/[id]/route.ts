@@ -10,15 +10,7 @@ function isAdminEmail(email?: string | null) {
   return !!email && !!process.env.ADMIN_EMAIL && email === process.env.ADMIN_EMAIL;
 }
 
-function hasValidQuestionTypeDistribution(questions: { type: string }[]) {
-  const counts = questions.reduce<Record<string, number>>((acc, question) => {
-    acc[question.type] = (acc[question.type] ?? 0) + 1;
-    return acc;
-  }, {});
 
-  const usedTypeCounts = Object.values(counts).filter((count) => count > 0);
-  return usedTypeCounts.every((count) => count >= 3 && count <= 5);
-}
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
@@ -49,12 +41,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Invalid survey payload", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  if (!hasValidQuestionTypeDistribution(parsed.data.questions)) {
-    return NextResponse.json(
-      { error: "Each question type used must have between 3 and 5 questions of that type." },
-      { status: 400 }
-    );
-  }
+
 
   await connectToDatabase();
   const { id } = await params;

@@ -9,6 +9,7 @@ import { useSearchParams } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import LinkifyText from "@/components/LinkifyText";
+import ThemeToggle from "@/components/ThemeToggle";
 
 type Question = {
   _id: string;
@@ -633,6 +634,7 @@ function SurveyContent() {
 export default function SurveyPage() {
   return (
     <Suspense fallback={<main className="flex min-h-screen items-center justify-center">Loading...</main>}>
+      <ThemeToggle />
       <SurveyContent />
     </Suspense>
   );
